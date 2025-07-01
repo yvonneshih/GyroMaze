@@ -6,16 +6,22 @@
   <style>
     canvas { background: #eee; display: block; margin: 0 auto; }
     body { text-align: center; }
+    #gyro-info { margin: 10px; font-size: 18px; }
+    #enable-gyro { margin: 10px; font-size: 18px; }
   </style>
 </head>
 <body>
   <h2>用手机陀螺仪控制小球逃离迷宫</h2>
+  <button id="enable-gyro">启用陀螺仪</button>
+  <div id="gyro-info">陀螺仪数据：beta: --, gamma: --</div>
   <canvas id="maze" width="400" height="400"></canvas>
   <script>
     const size = 8;
     const cellSize = 50;
     const canvas = document.getElementById('maze');
     const ctx = canvas.getContext('2d');
+    const gyroInfo = document.getElementById('gyro-info');
+    const enableGyroBtn = document.getElementById('enable-gyro');
 
     // 0: 空地, 1: 障碍物, 2: 终点
     const maze = [
@@ -68,8 +74,9 @@
 
     // 陀螺仪控制
     let lastMove = Date.now();
-    window.addEventListener('deviceorientation', function(event) {
+    function handleOrientation(event) {
       // event.gamma: 左右, event.beta: 前后
+      gyroInfo.textContent = `陀螺仪数据：beta: ${event.beta.toFixed(2)}, gamma: ${event.gamma.toFixed(2)}`;
       if(Date.now() - lastMove < 200) return; // 控制移动频率
       let moved = false;
       if(event.gamma > 15) { movePlayer(1,0); moved = true; } // 右
@@ -77,7 +84,27 @@
       if(event.beta > 25) { movePlayer(0,1); moved = true; } // 下
       else if(event.beta < 5) { movePlayer(0,-1); moved = true; } // 上
       if(moved) lastMove = Date.now();
-    });
+    }
+
+    // 兼容 iOS 13+ 需要权限
+    enableGyroBtn.onclick = function() {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+              enableGyroBtn.style.display = 'none';
+            } else {
+              alert('未获得陀螺仪权限');
+            }
+          })
+          .catch(console.error);
+      } else {
+        // 其他浏览器直接监听
+        window.addEventListener('deviceorientation', handleOrientation);
+        enableGyroBtn.style.display = 'none';
+      }
+    };
 
     drawMaze();
   </script>
