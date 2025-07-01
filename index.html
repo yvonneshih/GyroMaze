@@ -1,918 +1,819 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Music Play Mode</title>
-    <style>
-        body {
-            margin: 0;
-            background: #222;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .lang-select {
-            background: #444;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 14px;
-            font-size: 1em;
-            margin: 24px 0 10px 0;
-        }
-        h1 { margin: 0 0 18px 0; }
-        #musicCanvas {
-            background: #111;
-            border-radius: 10px;
-            box-shadow: 0 4px 24px #0005;
-            margin-bottom: 18px;
-            display: block;
-        }
-        .keyboard-row {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .key-label {
-            background: #333;
-            color: #fff;
-            border-radius: 6px;
-            padding: 8px 14px;
-            font-size: 1.1em;
-            min-width: 36px;
-            text-align: center;
-            user-select: none;
-            transition: background 0.2s, color 0.2s;
-        }
-        .key-label.active {
-            background: #ffe066;
-            color: #222;
-        }
-        .key-label.highlight {
-            background: #ffe066;
-            color: #222;
-            box-shadow: 0 0 0 2px #ffe06699;
-        }
-        .tip { color: #aaa; margin: 10px 0 0 0; text-align: center; }
-        .intro {
-            margin: 18px 0 0 0;
-            color: #ffe066;
-            font-size: 1.05em;
-            text-align: left;
-            line-height: 1.7;
-            max-width: 420px;
-        }
-        .instrument-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .instrument-select {
-            background: #444;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 14px;
-            font-size: 1em;
-        }
-        /* 新增高亮Play按钮样式 */
-        .play-highlight {
-            background: #ffe066 !important;
-            color: #222 !important;
-            box-shadow: 0 0 0 3px #ffe06699;
-            border: 2px solid #ffe066;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>MusicPlay Mode Canvas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background: #222; color: #fff; font-family: Arial, "PingFang SC", "Microsoft YaHei", "Malgun Gothic", "Apple SD Gothic Neo", "Nanum Gothic", sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 400px; margin: 40px auto; background: #333; border-radius: 16px; box-shadow: 0 4px 24px #0005; padding: 24px 16px; position: relative; display: flex; flex-direction: column; align-items: center; }
+    h2 { text-align: center; margin-bottom: 18px; }
+    .controls-wrapper { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; margin-bottom: 20px; }
+    #pixelCanvas { display: block; margin-bottom: 20px; background: #111; border-radius: 8px; }
+    #originalCanvas { display: block; background: #111; border-radius: 8px; cursor: move; touch-action: none; }
+    .upload-btns { display: flex; justify-content: center; gap: 16px; }
+    .upload-btns label { background: #b85c5c; color: #fff; border-radius: 6px; padding: 8px 18px; cursor: pointer; text-align: center; }
+    .upload-btns input { display: none; }
+    .upload-btns button {
+      background: #b85c5c;
+      color: #fff;
+      border-radius: 6px;
+      padding: 8px 18px;
+      cursor: pointer;
+      text-align: center;
+      border: none;
+      font-family: inherit;
+      font-size: 1em;
+    }
+    .tip { text-align: center; color: #aaa; font-size: 0.98em; margin-top: 10px; min-height: 1.2em; }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    #pixelControlsRow label, #pixelControlsRow select, #pixelControlsRow input[type=range], #pixelControlsRow span,
+    #colorControlsRow label, #colorControlsRow input[type=range], #colorControlsRow span {
+      margin-right: 6px;
+      margin-bottom: 2px;
+      font-size: 1em;
+    }
+    #pixelControlsRow label, #colorControlsRow label {
+      min-width: 60px;
+      text-align: right;
+    }
+    #pixelControlsRow input[type=range], #colorControlsRow input[type=range] {
+      width: 80px;
+    }
+    #pixelControlsRow select {
+      min-width: 80px;
+    }
+    #pixelControlsRow span, #colorControlsRow span {
+      min-width: 36px;
+      display: inline-block;
+      text-align: center;
+    }
+    .video-controls { text-align: center; margin-top: 10px; }
+    .video-controls button { background: #b85c5c; color: #fff; border: none; border-radius: 6px; padding: 6px 18px; font-size: 1em; margin: 0 6px; }
+    .lang-select {
+      position: absolute; top: 18px; right: 18px;
+      background: #b85c5c; color: #fff; border: none; border-radius: 6px;
+      padding: 6px 14px; font-size: 1em; cursor: pointer; z-index: 10;
+    }
+    video { display: none; }
+    .error { color: #ffb3b3; text-align: center; margin: 8px 0; }
+    .instrument-select {
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 1em;
+    }
+    .play-highlight {
+      background: #ffe066 !important;
+      color: #222 !important;
+      box-shadow: 0 0 0 3px #ffe06699, 0 4px 24px #0005;
+      border: 2px solid #ffe066;
+      font-weight: bold;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+  </style>
 </head>
 <body>
-    <div class="top-bar">
-        <select class="lang-select" id="langSelect">
-            <option value="en">English</option>
-            <option value="zh">中文</option>
-            <option value="ko">한국어</option>
-            <option value="no">Norsk</option>
-        </select>
-        <select class="lang-select mode-select">
-            <option value="custom">Custom Mode</option>
-            <option value="follow">Following Mode</option>
-        </select>
-    </div>
-    <h1 id="mainTitle">Pixel Music Play Mode</h1>
-    <div class="song-bar" style="display:none; flex-direction:column; align-items:center; width:100%; max-width:320px; margin-bottom:8px;">
-        <div class="song-title" id="songTitle" style="font-weight:bold; font-size:1em; margin-bottom:4px; text-align:center;"></div>
-        <div style="display:flex; justify-content:center; align-items:center; gap:8px; width:100%;">
-            <select id="songSelect" class="lang-select" style="margin:0;">
-                <option value="twinkle">Twinkle Twinkle Little Star</option>
-                <option value="london">London Bridge is Falling Down</option>
-                <option value="ohsusanna">Oh! Susanna</option>
-                <option value="tiger">Two Tigers</option>
-                <option value="mary">Mary Had a Little Lamb</option>
-                <option value="painter">Painter</option>
-                <option value="jingle">Jingle Bells</option>
-        </select>
-            <button class="follow-play-btn lang-select" id="followPlayBtn" style="font-weight:bold; font-size:0.95em; padding:4px 10px; min-width:60px; margin:0;">Play</button>
+  <div class="container">
+      <select class="lang-select" id="langSelect">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="no">Norsk</option>
+        <option value="ko">한국어</option>
+      </select>
+    <h1 id="mainTitle">MusicPlay Mode Canvas</h1>
+    <div class="controls-wrapper">
+      <div class="upload-btns">
+        <label id="imgLabel">
+          <input type="file" accept="image/*" id="imgInput">
+        </label>
+        <label id="videoLabel">
+          <input type="file" accept="video/*,.mp4,.webm,.ogg" id="videoInput">
+        </label>
+        <button id="playAnimationBtn"></button>
+      </div>
+      <div id="mediaControls" style="display: none;">
+        <div class="controls-row">
+          <label id="scaleLabel"></label>
+          <input type="range" id="scaleSlider" min="0.2" max="3" step="0.01" value="1">
+          <span id="scaleVal">1.00</span>
         </div>
-    </div>
-    <canvas id="musicCanvas" width="320" height="320"></canvas>
-    <div class="keyboard-row" id="keyboardRow"></div>
-    <div class="instrument-row">
-        <label id="instrumentLabel">Instrument</label>
-        <select id="instrumentSelect" class="instrument-select">
-            <option value="piano">Piano</option>
-            <option value="guitar">Guitar</option>
-            <option value="flute">Flute</option>
-            <option value="cello">Cello</option>
+      </div>
+      <div class="controls-row">
+        <label id="gridLabel"></label>
+        <select id="gridSizeSelect">
+          <option value="8">8x8</option>
+          <option value="16">16x16</option>
+          <option value="32">32x32</option>
+          <option value="64">64x64</option>
         </select>
+      </div>
+      <div class="controls-row" id="pixelControlsRow">
+        <label id="shapeLabel"></label>
+        <select id="shapeSelect">
+          <option value="square">直角方格</option>
+          <option value="round">圆角方格</option>
+        </select>
+        <label id="radiusLabel"></label>
+        <input type="range" id="radiusSlider" min="0" max="40" step="1" value="13">
+        <span id="radiusVal">13</span>
+        <label id="pixelSizeLabel"></label>
+        <input type="range" id="pixelSizeSlider" min="0.5" max="1" step="0.01" value="1">
+        <span id="pixelSizeVal">1.00</span>
+      </div>
+      <div class="controls-row" id="colorControlsRow">
+        <label id="brightnessLabel"></label>
+        <input type="range" id="brightnessSlider" min="-100" max="100" value="0" step="1">
+        <span id="brightnessVal">0</span>
+        <label id="saturationLabel"></label>
+        <input type="range" id="saturationSlider" min="-100" max="100" value="0" step="1">
+        <span id="saturationVal">0</span>
+        <label id="contrastLabel"></label>
+        <input type="range" id="contrastSlider" min="-100" max="100" value="0" step="1">
+        <span id="contrastVal">0</span>
+      </div>
     </div>
-    <div class="tip" id="tip">Press keys (A S D F G H J) to play do re mi fa so la si</div>
-    <div class="intro" id="intro"></div>
-    <div class="volume-row">
-        <span>Volume:</span>
-        <input type="range" min="0" max="100" value="80">
-        <span>80%</span>
+    <canvas id="pixelCanvas" width="320" height="320"></canvas>
+    <div id="originalCanvasWrapper" style="display: none;">
+      <h2 id="originalTitle"></h2>
+      <canvas id="originalCanvas" width="320" height="320"></canvas>
+      <div class="video-controls" id="videoControls" style="display:none;">
+        <button id="playBtn"></button>
+        <button id="pauseBtn"></button>
     </div>
-    <script>
-    const LANGS = {
-        en: {
-            title: "Pixel Music Play Mode",
-            tip: "Press keys (A S D F G H J) to play do re mi fa so la si",
-            instrument: "Instrument",
-            play: "Play",
-            songs: [
-                { value: "twinkle", label: "Twinkle Twinkle Little Star" },
-                { value: "london", label: "London Bridge is Falling Down" },
-                { value: "ohsusanna", label: "Oh! Susanna" },
-                { value: "tiger", label: "Two Tigers" },
-                { value: "mary", label: "Mary Had a Little Lamb" },
-                { value: "painter", label: "Painter" },
-                { value: "jingle", label: "Jingle Bells" }
-            ],
-            songTitles: {
-                twinkle: "Twinkle Twinkle Little Star",
-                london: "London Bridge is Falling Down",
-                ohsusanna: "Oh! Susanna",
-                tiger: "Two Tigers",
-                mary: "Mary Had a Little Lamb",
-                painter: "Painter",
-                jingle: "Jingle Bells"
-            },
-            instruments: ["Piano", "Guitar", "Flute", "Cello"],
-            intro: `<b>How to play:</b><br>
-- Press <b>A S D F G H J</b> to play do re mi fa so la si.<br>
-- Hold <b>Down Arrow</b> + key for lower octave.<br>
-- Hold <b>Space</b> + key for higher octave.<br>
-- Multiple keys = chord.<br>
-- <b>Long press</b> a key to make the vertical bar higher.<br>
-- You can change the instrument below.`,
-            notes: ["do", "re", "mi", "fa", "so", "la", "si"],
-            keys: ["A", "S", "D", "F", "G", "H", "J"],
-            lyrics: {
-                twinkle: `Twinkle, twinkle, little star,\nHow I wonder what you are!\nUp above the world so high,\nLike a diamond in the sky.`,
-                london: `London Bridge is falling down, falling down, falling down,\nLondon Bridge is falling down, my fair lady!`,
-                ohsusanna: `Oh! Susanna, oh don't you cry for me,\nI come from Alabama with a banjo on my knee.`,
-                tiger: `Two tigers, two tigers, run so fast, run so fast,\nOne has no ears, one has no tail, very strange, very strange!`,
-                mary: `Mary had a little lamb, little lamb, little lamb,\nMary had a little lamb, its fleece was white as snow.`,
-                painter: `I am a painter, painting with great skill,\nI want to make the new house more beautiful.`,
-                jingle: `Jingle bells, jingle bells, jingle all the way!\nOh what fun it is to ride in a one-horse open sleigh!` 
-            },
-            notesText: {
-                twinkle: '1 1 5 5 6 6 5 | 4 4 3 3 2 2 1',
-                london: '5 6 5 4 | 3 4 5 - | 2 3 4 - | 3 4 5 - | 5 6 5 4 | 3 4 5 2 | 1 - 5 - | 1 - - -',
-                ohsusanna: '1 1 2 | 3 3 2 1 | 2 2 3 5 | 1 - - - | 5 5 6 | 5 3 2 1 | 2 3 2 1 | 1 - - -',
-                tiger: '1 2 3 1 | 1 2 3 1 | 3 4 5 - | 3 4 5 - | 5 6 5 4 3 1 | 5 6 5 4 3 1 | 1 5 1 - | 1 5 1 -',
-                mary: '3 2 1 2 | 3 3 3 - | 2 2 2 - | 3 3 3 - | 3 2 1 2 | 3 3 3 3 | 2 2 3 2 | 1 - - -',
-                painter: '5 3 5 3 | 5 3 1 - | 2 4 3 2 | 5 - - - | 5 3 5 3 | 5 3 1 - | 2 4 3 2 | 1 - - -',
-                jingle: '3 3 3 - | 3 3 3 - | 3 5 1 2 | 3 - - - | 4 4 4 4 | 4 3 3 3 | 3 2 2 3 | 2 - 5 - | 3 3 3 - | 3 3 3 - | 3 5 1 2 | 3 - - - | 5 5 4 2 | 1 - - - | 5 5 4 2 | 1 - - -'
-            }
-        },
-        zh: {
-            title: "像素音乐演奏模式",
-            tip: "按下键盘 (A S D F G H J) 演奏哆来咪发嗦拉西",
-            instrument: "乐器",
-            play: "播放",
-            songs: [
-                { value: "twinkle", label: "一闪一闪亮晶晶" },
-                { value: "london", label: "伦敦桥垮下来" },
-                { value: "ohsusanna", label: "哦！苏珊娜" },
-                { value: "tiger", label: "两只老虎" },
-                { value: "mary", label: "玛丽有只小羊羔" },
-                { value: "painter", label: "粉刷匠" },
-                { value: "jingle", label: "铃儿响叮当" }
-            ],
-            songTitles: {
-                twinkle: "一闪一闪亮晶晶",
-                london: "伦敦桥垮下来",
-                ohsusanna: "哦！苏珊娜",
-                tiger: "两只老虎",
-                mary: "玛丽有只小羊羔",
-                painter: "粉刷匠",
-                jingle: "铃儿响叮当"
-            },
-            instruments: ["钢琴", "吉他", "长笛", "大提琴"],
-            intro: `<b>玩法说明：</b><br>
-- 按 <b>A S D F G H J</b> 演奏哆来咪发嗦拉西。<br>
-- 按住 <b>↓方向键</b> + 音符键为低八度。<br>
-- 按住 <b>空格</b> + 音符键为高八度。<br>
-- 可多键同时按下弹和弦。<br>
-- <b>长按</b>某键，竖条会逐步升高。<br>
-- 可在下方切换乐器。`,
-            notes: ["哆", "来", "咪", "发", "嗦", "拉", "西"],
-            keys: ["A", "S", "D", "F", "G", "H", "J"],
-            lyrics: {
-                twinkle: `一闪一闪亮晶晶，满天都是小星星，\n挂在天空放光明，好像许多小眼睛。`,
-                london: `伦敦桥垮下来，垮下来，垮下来，\n伦敦桥垮下来，我的小姐姐。`,
-                ohsusanna: `哦！苏珊娜，别为我哭泣，\n我从阿拉巴马来，膝上带着班卓琴。`,
-                tiger: `两只老虎，两只老虎，跑得快，跑得快，\n一只没有耳朵，一只没有尾巴，真奇怪，真奇怪！`,
-                mary: `玛丽有只小羊羔，小羊羔，小羊羔，\n玛丽有只小羊羔，毛色雪一般。`,
-                painter: `我是一个粉刷匠，粉刷本领强，\n我要把那新房子，刷得更漂亮。`,
-                jingle: `铃儿响叮当，铃儿响叮当，\n一路欢笑歌声多，坐在雪橇多快活！`
-            },
-            notesText: {
-                twinkle: '1 1 5 5 6 6 5 | 4 4 3 3 2 2 1',
-                london: '5 6 5 4 | 3 4 5 - | 2 3 4 - | 3 4 5 - | 5 6 5 4 | 3 4 5 2 | 1 - 5 - | 1 - - -',
-                ohsusanna: '1 1 2 | 3 3 2 1 | 2 2 3 5 | 1 - - - | 5 5 6 | 5 3 2 1 | 2 3 2 1 | 1 - - -',
-                tiger: '1 2 3 1 | 1 2 3 1 | 3 4 5 - | 3 4 5 - | 5 6 5 4 3 1 | 5 6 5 4 3 1 | 1 5 1 - | 1 5 1 -',
-                mary: '3 2 1 2 | 3 3 3 - | 2 2 2 - | 3 3 3 - | 3 2 1 2 | 3 3 3 3 | 2 2 3 2 | 1 - - -',
-                painter: '5 3 5 3 | 5 3 1 - | 2 4 3 2 | 5 - - - | 5 3 5 3 | 5 3 1 - | 2 4 3 2 | 1 - - -',
-                jingle: '3 3 3 - | 3 3 3 - | 3 5 1 2 | 3 - - - | 4 4 4 4 | 4 3 3 3 | 3 2 2 3 | 2 - 5 - | 3 3 3 - | 3 3 3 - | 3 5 1 2 | 3 - - - | 5 5 4 2 | 1 - - - | 5 5 4 2 | 1 - - -'
-            }
-        },
-        ko: {
-            title: "픽셀 음악 연주 모드",
-            tip: "A S D F G H J 키로 도레미파솔라시를 연주하세요",
-            instrument: "악기",
-            play: "재생",
-            songs: [
-                { value: "twinkle", label: "반짝반짝 작은별" },
-                { value: "london", label: "런던 브릿지" },
-                { value: "ohsusanna", label: "오! 수잔나" },
-                { value: "tiger", label: "두 마리 호랑이" },
-                { value: "mary", label: "메리의 작은 양" },
-                { value: "painter", label: "페인터" },
-                { value: "jingle", label: "징글벨" }
-            ],
-            songTitles: {
-                twinkle: "반짝반짝 작은별",
-                london: "런던 브릿지",
-                ohsusanna: "오! 수잔나",
-                tiger: "두 마리 호랑이",
-                mary: "메리의 작은 양",
-                painter: "페인터",
-                jingle: "징글벨"
-            },
-            instruments: ["피아노", "기타", "플루트", "첼로"],
-            intro: `<b>플레이 방법:</b><br>
-- <b>A S D F G H J</b> 키로 도레미파솔라시를 연주하세요.<br>
-- <b>아래 화살표</b> + 키: 저음 옥타브.<br>
-- <b>스페이스바</b> + 키: 고음 옥타브.<br>
-- 여러 키를 동시에 누르면 코드 연주 가능.<br>
-- <b>길게 누르면</b> 해당 열이 점점 더 높아집니다.<br>
-- 아래에서 악기를 바꿀 수 있습니다。`,
-            notes: ["도", "레", "미", "파", "솔", "라", "시"],
-            keys: ["A", "S", "D", "F", "G", "H", "J"]
-        },
-        no: {
-            title: "Piksel Musikkspill-modus",
-            tip: "Trykk på tastene (A S D F G H J) for å spille do re mi fa so la si",
-            instrument: "Instrument",
-            play: "Spill",
-            songs: [
-                { value: "twinkle", label: "Blinke blinke stjernelill" },
-                { value: "london", label: "London Bridge" },
-                { value: "ohsusanna", label: "Oh! Susanna" },
-                { value: "tiger", label: "To tigre" },
-                { value: "mary", label: "Mary Had a Little Lamb" },
-                { value: "painter", label: "Maler" },
-                { value: "jingle", label: "Bjelleklang" }
-            ],
-            songTitles: {
-                twinkle: "Blinke blinke stjernelill",
-                london: "London Bridge",
-                ohsusanna: "Oh! Susanna",
-                tiger: "To tigre",
-                mary: "Mary Had a Little Lamb",
-                painter: "Maler",
-                jingle: "Bjelleklang"
-            },
-            instruments: ["Piano", "Gitar", "Fløyte", "Cello"],
-            intro: `<b>Slik spiller du:</b><br>
-- Trykk <b>A S D F G H J</b> for å spille do re mi fa so la si.<br>
-- Hold <b>pil ned</b> + tast for lavere oktav.<br>
-- Hold <b>mellomrom</b> + tast for høyere oktav.<br>
-- Flere taster = akkord.<br>
-- <b>Hold inne</b> en tast for å gjøre søylen høyere.<br>
-- Du kan bytte instrument nedenfor。`,
-            notes: ["do", "re", "mi", "fa", "so", "la", "si"],
-            keys: ["A", "S", "D", "F", "G", "H", "J"]
+    </div>
+    <video id="video" crossorigin="anonymous" playsinline webkit-playsinline loop autoplay></video>
+    <div class="error" id="errorMsg"></div>
+    <div class="tip" id="tip"></div>
+    <canvas id="maze"></canvas>
+  </div>
+  <script>
+    const LANGS = [
+      {
+        code: "zh", name: "中文", title: "MusicPlay Mode Canvas", originalTitle: "原始图像 (可拖动)",
+        imgLabel: "上传图片", videoLabel: "上传视频", scaleLabel: "缩放", gridLabel: "网格",
+        playBtn: "播放", pauseBtn: "暂停", tip: "上传媒体以查看像素化效果。",
+        shapeLabel: "像素形状", radiusLabel: "圆角", pixelSizeLabel: "像素大小", shapeSquare: "直角方格", shapeRound: "圆角方格",
+        brightnessLabel: "亮度", saturationLabel: "饱和度", contrastLabel: "对比度",
+        playAnimationBtn: "播放动画", stopAnimationBtn: "停止动画"
+      },
+      {
+        code: "en", name: "English", title: "MusicPlay Mode Canvas", originalTitle: "Original Image (Draggable)",
+        imgLabel: "Upload Image", videoLabel: "Upload Video", scaleLabel: "Scale", gridLabel: "Grid",
+        playBtn: "Play", pauseBtn: "Pause", tip: "Upload media to see the pixelated effect.",
+        shapeLabel: "Pixel Shape", radiusLabel: "Radius", pixelSizeLabel: "Pixel Size", shapeSquare: "Square", shapeRound: "Round",
+        brightnessLabel: "Brightness", saturationLabel: "Saturation", contrastLabel: "Contrast",
+        playAnimationBtn: "Play Animation", stopAnimationBtn: "Stop Animation"
+      },
+      {
+        code: "no", name: "Norsk", title: "MusicPlay Mode Canvas", originalTitle: "Originalbilde (Dra-bart)",
+        imgLabel: "Last opp bilde", videoLabel: "Last opp video", scaleLabel: "Skala", gridLabel: "Rutenett",
+        playBtn: "Spill av", pauseBtn: "Pause", tip: "Last opp media for å se den pikselerte effekten.",
+        shapeLabel: "Pikselform", radiusLabel: "Radius", pixelSizeLabel: "Pikselstørrelse", shapeSquare: "Rektangel", shapeRound: "Sirkel",
+        brightnessLabel: "Lysstyrke", saturationLabel: "Metning", contrastLabel: "Kontrast",
+        playAnimationBtn: "Spill av animasjon", stopAnimationBtn: "Stopp animasjon"
+      },
+      {
+        code: "ko", name: "한국어", title: "MusicPlay Mode Canvas", originalTitle: "원본 이미지 (드래그 가능)",
+        imgLabel: "이미지 업로드", videoLabel: "비디오 업로드", scaleLabel: "확대/축소", gridLabel: "그리드",
+        playBtn: "재생", pauseBtn: "일시정지", tip: "픽셀화 효과를 보려면 미디어를 업로드하십시오.",
+        shapeLabel: "픽셀 모양", radiusLabel: "반지름", pixelSizeLabel: "픽셀 크기", shapeSquare: "직각 사각형", shapeRound: "둥근 사각형",
+        brightnessLabel: "밝기", saturationLabel: "채도", contrastLabel: "대비",
+        playAnimationBtn: "애니메이션 재생", stopAnimationBtn: "애니메이션 중지"
+      }
+    ];
+    const pixelCanvas = document.getElementById('pixelCanvas');
+    const pCtx = pixelCanvas.getContext('2d');
+    const originalCanvas = document.getElementById('originalCanvas');
+    const oCtx = originalCanvas.getContext('2d');
+    const video = document.getElementById('video');
+    const errorMsg = document.getElementById('errorMsg');
+    let langIdx = 0, gridSize = 8, cellSize = pixelCanvas.width / gridSize, pixelShape = 'round', cellRadius = 13, pixelSizeRatio = 1;
+    let brightness = 0, saturation = 0, contrast = 0;
+    let img = null, isVideo = false, mediaSrc = null;
+    let imgObj = { x: 0, y: 0, scale: 1 };
+    let isDragging = false, startX, startY;
+    let animationId = null;
+    let mediaJustLoaded = false;
+    let isAnimatingSpiral = false;
+    let spiralAnimationId = null;
+    function setLangByCode(code) {
+      langIdx = LANGS.findIndex(l => l.code === code);
+      if (langIdx === -1) langIdx = 0;
+      const L = LANGS[langIdx];
+      document.getElementById('title').textContent = L.title;
+      document.getElementById('originalTitle').textContent = L.originalTitle;
+      document.getElementById('imgLabel').childNodes[0].textContent = L.imgLabel;
+      document.getElementById('videoLabel').childNodes[0].textContent = L.videoLabel;
+      document.getElementById('scaleLabel').textContent = L.scaleLabel;
+      document.getElementById('gridLabel').textContent = L.gridLabel;
+      document.getElementById('playBtn').textContent = L.playBtn;
+      document.getElementById('pauseBtn').textContent = L.pauseBtn;
+      document.getElementById('tip').textContent = L.tip;
+      document.getElementById('shapeLabel').textContent = L.shapeLabel || '像素形状';
+      document.getElementById('radiusLabel').textContent = L.radiusLabel || '圆角';
+      document.getElementById('pixelSizeLabel').textContent = L.pixelSizeLabel || '像素大小';
+      document.getElementById('brightnessLabel').textContent = L.brightnessLabel || '亮度';
+      document.getElementById('saturationLabel').textContent = L.saturationLabel || '饱和度';
+      document.getElementById('contrastLabel').textContent = L.contrastLabel || '对比度';
+      document.querySelector('#shapeSelect option[value="square"]').textContent = L.shapeSquare || '直角方格';
+      document.querySelector('#shapeSelect option[value="round"]').textContent = L.shapeRound || '圆角方格';
+      document.getElementById('playAnimationBtn').textContent = isAnimatingSpiral ? L.stopAnimationBtn : L.playAnimationBtn;
+      errorMsg.textContent = '';
+    }
+    function updateControlsVisibility() {
+      const hasMedia = img || isVideo;
+      document.getElementById('mediaControls').style.display = hasMedia ? 'flex' : 'none';
+      document.getElementById('videoControls').style.display = isVideo ? 'flex' : 'none';
+      document.getElementById('originalCanvasWrapper').style.display = hasMedia ? 'block' : 'none';
+    }
+    function renderCanvases() {
+      pCtx.fillStyle = "#111";
+      pCtx.fillRect(0, 0, pixelCanvas.width, pixelCanvas.height);
+      oCtx.fillStyle = "#111";
+      oCtx.fillRect(0, 0, originalCanvas.width, originalCanvas.height);
+      let source = img || (isVideo ? video : null);
+      if (source) {
+        const sourceW = isVideo ? video.videoWidth : img.width;
+        const sourceH = isVideo ? video.videoHeight : img.height;
+        oCtx.drawImage(source, imgObj.x, imgObj.y, sourceW * imgObj.scale, sourceH * imgObj.scale);
+        const sx = -imgObj.x / imgObj.scale;
+        const sy = -imgObj.y / imgObj.scale;
+        const sWidth = pixelCanvas.width / imgObj.scale;
+        const sHeight = pixelCanvas.height / imgObj.scale;
+        const avgColorCanvas = document.createElement('canvas');
+        avgColorCanvas.width = gridSize;
+        avgColorCanvas.height = gridSize;
+        const avgColorCtx = avgColorCanvas.getContext('2d');
+        avgColorCtx.drawImage(source, sx, sy, sWidth, sHeight, 0, 0, gridSize, gridSize);
+      const gap = 2;
+      let radius = pixelShape === 'round' ? cellRadius : 0;
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+            const pixel = avgColorCtx.getImageData(x, y, 1, 1).data;
+            const [r, g, b] = adjustColor(pixel[0], pixel[1], pixel[2]);
+            const color = `rgba(${r},${g},${b},${pixel[3]/255})`;
+          const px = x * cellSize + (cellSize - cellSize * pixelSizeRatio) / 2 + gap/2;
+          const py = y * cellSize + (cellSize - cellSize * pixelSizeRatio) / 2 + gap/2;
+          const size = cellSize * pixelSizeRatio - gap;
+          pCtx.fillStyle = color;
+          fillRoundRect(pCtx, px, py, size, size, radius);
+        }
+      }
+      }
+      drawGridLines();
+    }
+    function drawGridLines() {
+      pCtx.save();
+      pCtx.strokeStyle = "rgba(128, 128, 128, 0.3)";
+      pCtx.lineWidth = 1;
+      for(let i = 1; i < gridSize; i++){
+        pCtx.beginPath();
+        pCtx.moveTo(i * cellSize, 0);
+        pCtx.lineTo(i * cellSize, pixelCanvas.height);
+        pCtx.stroke();
+        pCtx.beginPath();
+        pCtx.moveTo(0, i * cellSize);
+        pCtx.lineTo(pixelCanvas.width, i * cellSize);
+        pCtx.stroke();
+      }
+      pCtx.restore();
+    }
+    function adjustColor(r, g, b) {
+        // Brightness
+        if (brightness !== 0) {
+            r += brightness;
+            g += brightness;
+            b += brightness;
+        }
+        // Contrast
+        if (contrast !== 0) {
+            const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+            r = factor * (r - 128) + 128;
+            g = factor * (g - 128) + 128;
+            b = factor * (b - 128) + 128;
+        }
+        // Saturation
+        if (saturation !== 0) {
+            const sat = 1 + saturation / 100.0;
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            r = gray + sat * (r - gray);
+            g = gray + sat * (g - gray);
+            b = gray + sat * (b - gray);
+        }
+        r = Math.max(0, Math.min(255, r));
+        g = Math.max(0, Math.min(255, g));
+        b = Math.max(0, Math.min(255, b));
+        return [r, g, b];
+    }
+    function getPointer(e, targetCanvas) {
+      const rect = targetCanvas.getBoundingClientRect();
+      const touch = e.touches ? e.touches[0] : e;
+      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    }
+    function handlePointerDown(e) {
+        if (img || isVideo) {
+            isDragging = true;
+            const pointer = getPointer(e, originalCanvas);
+            startX = pointer.x - imgObj.x;
+            startY = pointer.y - imgObj.y;
+        }
+    }
+    function handlePointerMove(e) {
+        if (isDragging) {
+            const pointer = getPointer(e, originalCanvas);
+            imgObj.x = pointer.x - startX;
+            imgObj.y = pointer.y - startY;
+            renderCanvases();
+        }
+    }
+    function handlePointerUp() {
+      isDragging = false;
+    }
+    document.getElementById('langSelect').onchange = (e) => setLangByCode(e.target.value);
+    document.getElementById('gridSizeSelect').onchange = (e) => {
+        gridSize = parseInt(e.target.value, 10);
+        cellSize = pixelCanvas.width / gridSize;
+        if (isAnimatingSpiral) {
+            stopSpiralAnimation();
+            startSpiralAnimation();
+        } else {
+            renderCanvases();
         }
     };
-    const NOTE_FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88]; // C D E F G A B
-    const gridSize = 8;
-    const canvas = document.getElementById('musicCanvas');
-    const ctx = canvas.getContext('2d');
-    const langSelect = document.getElementById('langSelect');
-    const mainTitle = document.getElementById('mainTitle');
-    const tipEl = document.getElementById('tip');
-    const keyboardRow = document.getElementById('keyboardRow');
-    const instrumentLabel = document.getElementById('instrumentLabel');
-    const instrumentSelect = document.getElementById('instrumentSelect');
-    const intro = document.getElementById('intro');
-    const modeSelect = document.querySelector('.mode-select');
-    const songSelect = document.getElementById('songSelect');
-    const songBar = document.querySelector('.song-bar');
-    const songTitle = document.getElementById('songTitle');
-    const followPlayBtn = document.getElementById('followPlayBtn');
-    let currentLang = 'en';
-    let currentSong = 'twinkle';
-    let pressed = {};
-    let audioCtx, oscillators = {};
-    // 7音阶映射到8列（最后一列为和弦/高音/留白）
-    const keyToCol = { 'A':0, 'S':1, 'D':2, 'F':3, 'G':4, 'H':5, 'J':6 };
-    // 动态主色：低八度蓝色，中八度青色，高八度橙色
-    const octaveColors = [
-        [30,80,220],   // 低八度 蓝
-        [0,200,180],   // 中八度 青
-        [255,140,0]    // 高八度 橙
-    ];
-    let barColors = Array(7).fill(0).map(()=>[0,200,180]); // 初始为中八度色
-    let barTargetColors = Array(7).fill(0).map(()=>[0,200,180]);
-    let barOctave = Array(7).fill(1); // 0:低 1:中 2:高
-    // 跟随模式相关变量，提前声明
-    let followMode = false;
-    let followStep = 0;
-    let followActive = false;
-    let followWaiting = false;
-    let followFade = 0;
-    let followFadeIdx = -1;
-    // 能量条高度动画状态
-    let barGrow = Array(7).fill(0); // 0~1，出现动画进度
-    // 动态能量条渐变色动画参数
-    let energyGradientPhase = 0;
-    keyboardRow.style.display = 'grid';
-    keyboardRow.style.gridTemplateColumns = 'repeat(8, 1fr)';
-    keyboardRow.style.maxWidth = '320px';
-    keyboardRow.style.width = '320px';
-    keyboardRow.style.margin = '0 auto 10px auto';
-    keyboardRow.style.gap = '0';
-    // 优化key-label按钮样式
-    const styleKeyLabel = (el) => {
-        el.style.fontSize = '0.95em';
-        el.style.padding = '4px 10px';
-        el.style.minWidth = '36px';
-        el.style.boxSizing = 'border-box';
+    const shapeSelect = document.getElementById('shapeSelect');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const radiusVal = document.getElementById('radiusVal');
+    shapeSelect.onchange = (e) => {
+      pixelShape = e.target.value;
+      if (pixelShape === 'square') {
+        cellRadius = 0;
+        radiusSlider.value = 0;
+        radiusVal.textContent = 0;
+      } else if (pixelShape === 'round') {
+        cellRadius = 9;
+        radiusSlider.value = 9;
+        radiusVal.textContent = 9;
+      }
+      renderCanvases();
+    };
+    radiusSlider.oninput = function() {
+      cellRadius = parseInt(this.value, 10);
+      radiusVal.textContent = cellRadius;
+      if (cellRadius === 0) {
+        pixelShape = 'square';
+        shapeSelect.value = 'square';
+      } else {
+        pixelShape = 'round';
+        shapeSelect.value = 'round';
+      }
+      renderCanvases();
+    };
+    document.getElementById('scaleSlider').oninput = function() {
+       if (!img && !isVideo) return;
+       const oldScale = imgObj.scale;
+       const newScale = parseFloat(this.value);
+       document.getElementById('scaleVal').textContent = newScale.toFixed(2);
+       const canvasCenterX = originalCanvas.width / 2;
+       const canvasCenterY = originalCanvas.height / 2;
+       const centerRelX = canvasCenterX - imgObj.x;
+       const centerRelY = canvasCenterY - imgObj.y;
+       const imgPointX = centerRelX / oldScale;
+       const imgPointY = centerRelY / oldScale;
+       imgObj.x = canvasCenterX - imgPointX * newScale;
+       imgObj.y = canvasCenterY - imgPointY * newScale;
+       imgObj.scale = newScale;
+       renderCanvases();
+    };
+    document.getElementById('pixelSizeSlider').oninput = function() {
+      pixelSizeRatio = parseFloat(this.value);
+      document.getElementById('pixelSizeVal').textContent = pixelSizeRatio.toFixed(2);
+      renderCanvases();
+    };
+    document.getElementById('brightnessSlider').oninput = function() {
+      brightness = parseInt(this.value, 10);
+      document.getElementById('brightnessVal').textContent = brightness;
+      renderCanvases();
+    };
+    document.getElementById('saturationSlider').oninput = function() {
+      saturation = parseInt(this.value, 10);
+      document.getElementById('saturationVal').textContent = saturation;
+      renderCanvases();
+    };
+    document.getElementById('contrastSlider').oninput = function() {
+      contrast = parseInt(this.value, 10);
+      document.getElementById('contrastVal').textContent = contrast;
+      renderCanvases();
+    };
+    function setupMedia(file) {
+      stopSpiralAnimation();
+      mediaSrc = URL.createObjectURL(file);
+      updateControlsVisibility();
+      mediaJustLoaded = true;
+      const L = LANGS[langIdx];
+      const tip = document.getElementById('tip');
+      tip.textContent = `Loading ${file.name}...`;
+      return mediaSrc;
     }
-    function setLangUI(lang) {
-        const L = LANGS[lang];
-        mainTitle.textContent = L.title;
-        tipEl.textContent = L.tip;
-        keyboardRow.innerHTML = '';
-        // 多语言节拍器label
-        const metronomeLabels = {
-            en: 'M\nMetronome',
-            zh: 'M\n节拍器',
-            ko: 'M\n메트로놈',
-            no: 'M\nMetronom'
+    document.getElementById('imgInput').onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      isVideo = false;
+      img = new Image();
+      const imgUrl = setupMedia(file);
+      img.onload = () => {
+        if (mediaJustLoaded) {
+            imgObj.scale = 1;
+            document.getElementById('scaleSlider').value = 1;
+            document.getElementById('scaleVal').textContent = "1.00";
+            imgObj.x = (originalCanvas.width - img.width) / 2;
+            imgObj.y = (originalCanvas.height - img.height) / 2;
+            mediaJustLoaded = false;
+        }
+        document.getElementById('tip').textContent = `Successfully loaded ${file.name}.`;
+        renderCanvases();
+      }
+      img.onerror = () => {
+        document.getElementById('tip').textContent = `Error loading ${file.name}. The file may be corrupt or an unsupported format.`;
+      };
+      img.src = imgUrl;
+      video.pause();
+      cancelAnimationFrame(animationId);
+    };
+    document.getElementById('videoInput').onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        stopSpiralAnimation();
+        isVideo = true;
+        img = null;
+        const videoUrl = setupMedia(file);
+        video.oncanplay = () => {
+          if (mediaJustLoaded) {
+            imgObj.scale = 1;
+            document.getElementById('scaleSlider').value = 1;
+            document.getElementById('scaleVal').textContent = "1.00";
+            imgObj.x = (originalCanvas.width - video.videoWidth) / 2;
+            imgObj.y = (originalCanvas.height - video.videoHeight) / 2;
+            mediaJustLoaded = false;
+            document.getElementById('tip').textContent = `Successfully loaded ${file.name}.`;
+          }
+          renderCanvases();
         };
-        for (let i = 0; i < 8; i++) {
-            const div = document.createElement('div');
-            div.className = 'key-label';
-            div.id = 'keyLabel_' + i;
-            if (i < 7) {
-                div.textContent = `${L.keys[i]}\n${L.notes[i]}`;
-            } else {
-                div.textContent = metronomeLabels[lang] || 'M\nMetronome';
-            }
-            div.style.whiteSpace = 'pre';
-            styleKeyLabel(div);
-            div.style.textAlign = 'center';
-            // 事件绑定
-            if (i < 7) {
-                div.addEventListener('mousedown', () => {
-                    playNote(i, 0); // 立即播放声音
-                    triggerVirtualKey(i, false, false);
-                });
-                div.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    playNote(i, 0); // 立即播放声音
-                    triggerVirtualKey(i, false, false);
-                }, {passive:false});
-                div.addEventListener('mouseup', () => {
-                    releaseVirtualKey(i);
-                });
-                div.addEventListener('mouseleave', () => {
-                    releaseVirtualKey(i);
-                });
-                div.addEventListener('touchend', () => {
-                    releaseVirtualKey(i);
-                });
-            } else {
-                div.addEventListener('mousedown', () => {
-                    toggleMetronome();
-                });
-                div.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    toggleMetronome();
-                }, {passive:false});
-            }
-            keyboardRow.appendChild(div);
+        video.onerror = () => {
+            document.getElementById('tip').textContent = `Error loading ${file.name}. The file may be corrupt or an unsupported format.`;
+        };
+        video.src = videoUrl;
+    };
+    document.getElementById('playBtn').onclick = () => video.play();
+    document.getElementById('pauseBtn').onclick = () => video.pause();
+    function videoLoop() {
+        if (!isVideo || video.paused || video.ended) {
+            cancelAnimationFrame(animationId);
+            return;
         }
-        // 歌曲下拉框多语言
-        songSelect.innerHTML = '';
-        L.songs.forEach(song => {
-            const opt = document.createElement('option');
-            opt.value = song.value;
-            opt.textContent = song.label;
-            songSelect.appendChild(opt);
-        });
-        songSelect.value = currentSong;
-        // 歌曲标题多语言
-        songTitle.textContent = L.songTitles[currentSong] || '';
-        // Play按钮多语言
-        followPlayBtn.textContent = L.play;
-        // 乐器
-        instrumentLabel.textContent = L.instrument;
-        for (let i = 0; i < instrumentSelect.options.length; i++) {
-            instrumentSelect.options[i].textContent = L.instruments[i];
-        }
-        // 跟随模式下intro显示歌词和简谱，否则显示玩法说明
-        if (modeSelect.value === 'follow') {
-            intro.innerHTML = `<div style='white-space:pre-line;font-size:1.1em;margin-bottom:6px;'><b>Notes:</b> ${L.notesText[currentSong]||''}</div><div style='white-space:pre-line;font-size:1.1em;'>${L.lyrics[currentSong]||''}</div>`;
-        } else {
-            intro.innerHTML = L.intro;
-        }
+        renderCanvases();
+        animationId = requestAnimationFrame(videoLoop);
     }
-    langSelect.addEventListener('change', e => {
-        currentLang = e.target.value;
-        setLangUI(currentLang);
+    originalCanvas.addEventListener('mousedown', handlePointerDown);
+    originalCanvas.addEventListener('mousemove', handlePointerMove);
+    originalCanvas.addEventListener('mouseup', handlePointerUp);
+    originalCanvas.addEventListener('mouseleave', handlePointerUp);
+    originalCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); handlePointerDown(e); }, { passive: false });
+    originalCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); handlePointerMove(e); }, { passive: false });
+    originalCanvas.addEventListener('touchend', handlePointerUp);
+    video.addEventListener('play', () => {
+        cancelAnimationFrame(animationId);
+        animationId = requestAnimationFrame(videoLoop);
     });
-    setLangUI('en');
-    // 画布状态
-    let grid = Array(gridSize).fill(0).map(()=>Array(gridSize).fill(null));
-    let holdTimes = Array(7).fill(0); // 每个音符键的长按帧数
-    const keyOrder = ['A','S','D','F','G','H','J'];
-    function lerpColorRGB(c1, c2, t) {
-        return [
-            Math.round(c1[0] + (c2[0]-c1[0])*t),
-            Math.round(c1[1] + (c2[1]-c1[1])*t),
-            Math.round(c1[2] + (c2[2]-c1[2])*t)
-        ];
+    video.addEventListener('pause', () => cancelAnimationFrame(animationId));
+    video.addEventListener('ended', () => {
+        video.currentTime = 0;
+        video.play();
+        cancelAnimationFrame(animationId);
+    });
+    video.addEventListener('seeked', renderCanvases);
+    document.getElementById('playAnimationBtn').onclick = () => {
+      if (isAnimatingSpiral) {
+        stopSpiralAnimation();
+      } else {
+        startSpiralAnimation();
+      }
+    };
+    setLangByCode('zh');
+    cellSize = pixelCanvas.width / gridSize;
+    radiusSlider.value = cellRadius;
+    radiusVal.textContent = cellRadius;
+    shapeSelect.value = pixelShape;
+    document.getElementById('pixelSizeSlider').value = pixelSizeRatio;
+    document.getElementById('pixelSizeVal').textContent = pixelSizeRatio.toFixed(2);
+    document.getElementById('brightnessSlider').value = brightness;
+    document.getElementById('brightnessVal').textContent = brightness;
+    document.getElementById('saturationSlider').value = saturation;
+    document.getElementById('saturationVal').textContent = saturation;
+    document.getElementById('contrastSlider').value = contrast;
+    document.getElementById('contrastVal').textContent = contrast;
+    updateControlsVisibility();
+    renderCanvases();
+    function fillRoundRect(ctx, x, y, w, h, r) {
+      if (r <= 0) { ctx.fillRect(x, y, w, h); return; }
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
     }
-    function lerpBarColors() {
-        for(let i=0;i<7;i++){
-            for(let j=0;j<3;j++){
-                barColors[i][j] += (barTargetColors[i][j]-barColors[i][j])*0.18;
-            }
-        }
-    }
-    function lerpDynamicToWhite(i, t) {
-        // i: 音符索引, t: 0~1, 0为主色，1为白色
-        const c = lerpColorRGB(barColors[i], [255,255,255], t);
-        return `rgb(${c[0]},${c[1]},${c[2]})`;
-    }
-    function drawGrid() {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        // 动态渐变色：蓝->绿->黄->蓝 循环
-        // 蓝: 210,100%,60%  绿: 120,100%,60%  黄: 50,100%,60%
-        const phase = energyGradientPhase;
-        // 0~1: 蓝->绿, 1~2: 绿->黄, 2~3: 黄->蓝
-        let hue1, hue2;
-        let t = phase % 1;
-        if (phase < 1) { hue1 = 210; hue2 = 120; }
-        else if (phase < 2) { hue1 = 120; hue2 = 50; t = phase-1; }
-        else { hue1 = 50; hue2 = 210; t = phase-2; }
-        // 计算底色hue
-        const baseHue = hue1 + (hue2-hue1)*t;
-        for (let x = 0; x < gridSize; x++) {
-            for (let y = 0; y < gridSize; y++) {
-                let h = 0;
-                if (x < 7 && holdTimes[x] > 0) {
-                    let grow = barGrow[x] || 0;
-                    h = Math.max(1, Math.round(grow * gridSize));
-                    if (y >= gridSize-h) {
-                        // 动态渐变色，底色hue->白
-                        const t2 = (y - (gridSize-h)) / Math.max(1,h-1);
-                        const hue = baseHue;
-                        const sat = 100;
-                        const light = 60 + 40*t2; // 顶部更亮
-                        ctx.fillStyle = `hsl(${hue},${sat}%,${light}%)`;
-                    } else {
-                        ctx.fillStyle = grid[x][y] || '#222';
-                    }
-                } else {
-                    ctx.fillStyle = grid[x][y] || '#222';
+    // Spiral Animation Logic
+    let spiralOrder = [];
+    let pulseStartTime = 0;
+    let pulseDuration = 2000;
+
+    function getSpiralOrder(n) {
+        if (n <= 0) return [];
+        const result = [];
+        let x = Math.floor((n - 1) / 2);
+        let y = Math.floor((n - 1) / 2);
+        let dx = 1, dy = 0;
+        let steps_to_turn = 1;
+        let turn_count = 0;
+        let step_count = 0;
+        for (let i = 0; i < n * n; i++) {
+            result.push([x, y]);
+            x += dx;
+            y += dy;
+            step_count++;
+            if (step_count === steps_to_turn) {
+                step_count = 0;
+                [dx, dy] = [-dy, dx];
+                turn_count++;
+                if (turn_count === 2) {
+                    turn_count = 0;
+                    steps_to_turn++;
                 }
-                ctx.fillRect(x*40+4, y*40+4, 32, 32);
+            }
+        }
+        return result;
+    }
+    function startSpiralAnimation() {
+        isAnimatingSpiral = true;
+        document.getElementById('playAnimationBtn').textContent = LANGS[langIdx].stopAnimationBtn;
+        if (isVideo) video.pause();
+        cancelAnimationFrame(animationId);
+        img = null;
+        isVideo = false;
+        updateControlsVisibility();
+
+        spiralOrder = getSpiralOrder(gridSize);
+        pulseStartTime = performance.now();
+
+        if (spiralAnimationId) cancelAnimationFrame(spiralAnimationId);
+        spiralAnimationId = requestAnimationFrame(spiralLoop);
+    }
+    function stopSpiralAnimation() {
+        if (!isAnimatingSpiral) return;
+        isAnimatingSpiral = false;
+        document.getElementById('playAnimationBtn').textContent = LANGS[langIdx].playAnimationBtn;
+        if (spiralAnimationId) cancelAnimationFrame(spiralAnimationId);
+        spiralAnimationId = null;
+        pCtx.fillStyle = "#111";
+        pCtx.fillRect(0, 0, pixelCanvas.width, pixelCanvas.height);
+        drawGridLines();
+    }
+    function spiralLoop(currentTime) {
+        if (!isAnimatingSpiral) return;
+
+        const elapsedTime = currentTime - pulseStartTime;
+        const progress = elapsedTime / pulseDuration;
+
+        pCtx.fillStyle = "#111";
+        pCtx.fillRect(0, 0, pixelCanvas.width, pixelCanvas.height);
+        
+        drawSpiralFrame(progress);
+
+        drawGridLines();
+        spiralAnimationId = requestAnimationFrame(spiralLoop);
+    }
+    function drawSpiralFrame(progress) {
+        const gap = 2;
+        let radius = pixelShape === 'round' ? cellRadius : 0;
+        const totalLength = spiralOrder.length;
+        if (totalLength === 0) return;
+
+        const tailLength = totalLength;
+        const headPos = progress * totalLength;
+
+        for (let i = 0; i < totalLength; i++) {
+            if (!spiralOrder[i]) continue;
+            
+            const cyclicHeadPos = headPos % totalLength;
+            let distanceFromHead = cyclicHeadPos - i;
+            if (distanceFromHead < 0) {
+                distanceFromHead += totalLength;
+            }
+
+            const brightnessFactor = Math.max(0, 1.0 - (distanceFromHead / tailLength));
+
+            if (brightnessFactor > 0) {
+                const baseHue = (headPos / 50) % 360;
+                const hueShift = (distanceFromHead / tailLength) * 120;
+                const hue = (baseHue + hueShift) % 360;
+                const saturation = 100;
+                const lightness = 70 * brightnessFactor;
+                const color = `hsl(${Math.floor(hue)}, ${saturation}%, ${Math.floor(lightness)}%)`;
+                
+                const [x, y] = spiralOrder[i];
+                const px = x * cellSize + (cellSize - cellSize * pixelSizeRatio) / 2 + gap/2;
+                const py = y * cellSize + (cellSize - cellSize * pixelSizeRatio) / 2 + gap/2;
+                const size = cellSize * pixelSizeRatio - gap;
+                pCtx.fillStyle = color;
+                fillRoundRect(pCtx, px, py, size, size, radius);
             }
         }
     }
-    function animate() {
-        // 动态渐变色相位推进
-        energyGradientPhase += 0.012;
-        if (energyGradientPhase >= 3) energyGradientPhase -= 3;
-        // 能量条出现动画
-        for (let i = 0; i < 7; i++) {
-            if (holdTimes[i] > 0) {
-                barGrow[i] = Math.min(1, barGrow[i] + 0.12);
+
+    // 适配屏幕宽度
+    const size = 8;
+    const canvas = document.getElementById('maze');
+    const ctx = canvas.getContext('2d');
+    const gyroInfo = document.getElementById('gyro-info');
+    const enableGyroBtn = document.getElementById('enable-gyro');
+    // 计算单元格尺寸
+    function resizeCanvas() {
+      const width = Math.min(window.innerWidth, 500);
+      canvas.width = width;
+      canvas.height = width;
+      return width / size;
+    }
+    let cellSize = resizeCanvas();
+    window.addEventListener('resize', () => {
+      cellSize = resizeCanvas();
+      drawMaze();
+    });
+
+    // 随机迷宫生成（简单DFS算法）
+    function generateMaze(size) {
+      // 初始化全墙
+      let maze = Array.from({length: size}, () => Array(size).fill(1));
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+      function carve(x, y) {
+        maze[y][x] = 0;
+        let dirs = shuffle([[0,1],[1,0],[0,-1],[-1,0]]);
+        for (let [dx, dy] of dirs) {
+          let nx = x + dx*2, ny = y + dy*2;
+          if (nx >= 0 && nx < size && ny >= 0 && ny < size && maze[ny][nx] === 1) {
+            maze[y+dy][x+dx] = 0;
+            carve(nx, ny);
+          }
+        }
+      }
+      carve(0,0);
+      // 设置终点
+      maze[size-1][size-1] = 2;
+      return maze;
+    }
+
+    let maze = generateMaze(size);
+    let player = {x:0, y:0};
+    // 记录每个格子的渐变状态 {key: 'x,y', value: 结束时间戳}
+    let gradientCells = {};
+
+    function drawMaze() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const now = Date.now();
+      for(let y=0; y<size; y++) {
+        for(let x=0; x<size; x++) {
+          let key = `${x},${y}`;
+          // 渐变色
+          if(gradientCells[key] && gradientCells[key] > now) {
+            let t = 1 - (gradientCells[key] - now) / 1500;
+            let grad = ctx.createLinearGradient(x*cellSize, y*cellSize, x*cellSize+cellSize, y*cellSize+cellSize);
+            grad.addColorStop(0, `rgba(33,150,243,${1-t})`);
+            grad.addColorStop(1, `rgba(255,255,255,${t})`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+          } else if(maze[y][x] === 1) {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+          } else if(maze[y][x] === 2) {
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+          }
+          ctx.strokeStyle = '#bbb';
+          ctx.strokeRect(x*cellSize, y*cellSize, cellSize, cellSize);
+        }
+      }
+      // 画玩家
+      ctx.beginPath();
+      ctx.arc(player.x*cellSize+cellSize/2, player.y*cellSize+cellSize/2, cellSize/3, 0, Math.PI*2);
+      ctx.fillStyle = '#2196f3';
+      ctx.fill();
+    }
+
+    // Web Audio API 合成大提琴音色
+    let audioCtx = null;
+    function playCelloNote() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      // 大提琴低音G弦音色
+      osc.type = 'sawtooth';
+      osc.frequency.value = 130.81; // C3
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.linearRampToValueAtTime(0.12, now + 0.2);
+      gain.gain.linearRampToValueAtTime(0, now + 0.7);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.7);
+    }
+
+    let lastCell = `${player.x},${player.y}`;
+    function movePlayer(dx, dy) {
+      let nx = player.x + dx;
+      let ny = player.y + dy;
+      if(nx >= 0 && nx < size && ny >= 0 && ny < size && maze[ny][nx] !== 1) {
+        player.x = nx;
+        player.y = ny;
+        let key = `${nx},${ny}`;
+        if (lastCell !== key) {
+          gradientCells[key] = Date.now() + 1500;
+          playCelloNote();
+          lastCell = key;
+        }
+        if(maze[ny][nx] === 2) {
+          setTimeout(()=>{
+            alert('恭喜逃出迷宫！即将生成新迷宫');
+            maze = generateMaze(size);
+            player = {x:0, y:0};
+            gradientCells = {};
+            lastCell = '0,0';
+            drawMaze();
+          }, 100);
+        }
+      }
+      drawMaze();
+    }
+
+    // 陀螺仪控制
+    let lastMove = Date.now();
+    function handleOrientation(event) {
+      gyroInfo.textContent = `陀螺仪数据：beta: ${event.beta.toFixed(2)}, gamma: ${event.gamma.toFixed(2)}`;
+      if(Date.now() - lastMove < 200) return;
+      let moved = false;
+      if(event.gamma > 15) { movePlayer(1,0); moved = true; }
+      else if(event.gamma < -15) { movePlayer(-1,0); moved = true; }
+      if(event.beta > 25) { movePlayer(0,1); moved = true; }
+      else if(event.beta < 5) { movePlayer(0,-1); moved = true; }
+      if(moved) lastMove = Date.now();
+    }
+
+    enableGyroBtn.onclick = function() {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+              enableGyroBtn.style.display = 'none';
             } else {
-                barGrow[i] = 0;
+              alert('未获得陀螺仪权限');
             }
-        }
-        if (!(followMode && followWaiting)) {
-            for (let i = 0; i < 7; i++) {
-                if (pressed[keyOrder[i]]) holdTimes[i]++;
-                else holdTimes[i] = 0;
-            }
-            lerpBarColors();
-        }
-        drawGrid();
-        requestAnimationFrame(animate);
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+        enableGyroBtn.style.display = 'none';
+      }
+    };
+
+    // 动画循环，刷新渐变
+    function animate() {
+      drawMaze();
+      requestAnimationFrame(animate);
     }
     animate();
-    // 音频播放
-    function playNote(idx, octave=0) {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (oscillators[idx+octave*10]) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        let freq = NOTE_FREQS[idx];
-        if (octave === -1) freq /= 2;
-        if (octave === 1) freq *= 2;
-        osc.frequency.value = freq;
-        // 乐器音色
-        let type = 'sine', attack = 0.01, decay = 0.12;
-        switch (instrumentSelect.value) {
-            case 'piano': type = 'sine'; attack = 0.01; decay = 0.12; break;
-            case 'guitar': type = 'triangle'; attack = 0.01; decay = 0.18; break;
-            case 'flute': type = 'sine'; attack = 0.08; decay = 0.22; break;
-            case 'cello': type = 'sawtooth'; attack = 0.12; decay = 0.32; break;
-        }
-        osc.type = type;
-        gain.gain.value = 0.0;
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start();
-        gain.gain.linearRampToValueAtTime(0.18 * globalVolume, audioCtx.currentTime + attack);
-        oscillators[idx+octave*10] = {osc, gain, decay};
-        // 设置目标主色
-        let octaveIdx = octave+1; // -1:低 0:中 1:高 -> 0,1,2
-        if(octaveIdx<0) octaveIdx=0;
-        if(octaveIdx>2) octaveIdx=2;
-        barTargetColors[idx] = octaveColors[octaveIdx].slice();
-        barOctave[idx] = octaveIdx;
-    }
-    function stopNote(idx, octave=0) {
-        if (oscillators[idx+octave*10]) {
-            const {gain, osc, decay} = oscillators[idx+octave*10];
-            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + decay);
-            setTimeout(()=>{
-            osc.stop();
-            osc.disconnect();
-            gain.disconnect();
-                delete oscillators[idx+octave*10];
-            }, Math.max(120, decay*1000+20));
-        }
-    }
-    // 虚拟按键触发
-    function triggerVirtualKey(idx, isLow, isHigh) {
-        if (modeSelect.value === 'follow') {
-            handleFollowInput(idx);
-            return;
-        }
-        const key = keyOrder[idx];
-        if (pressed[key]) return;
-        pressed[key] = true;
-        let octave = 0;
-        if (isLow) octave = -1;
-        if (isHigh) octave = 1;
-        playNote(idx, octave);
-        for (let y = 0; y < gridSize; y++) grid[idx][y] = noteColors ? noteColors[idx] : '#fff';
-        document.getElementById('keyLabel_' + idx).classList.add('active');
-        drawGrid();
-    }
-    function releaseVirtualKey(idx) {
-        const key = keyOrder[idx];
-        pressed[key] = false;
-        stopNote(idx, 0);
-        for (let y = 0; y < gridSize; y++) grid[idx][y] = null;
-        document.getElementById('keyLabel_' + idx).classList.remove('active');
-        // 松开后目标主色回到中八度
-        barTargetColors[idx] = octaveColors[1].slice();
-        barOctave[idx] = 1;
-        drawGrid();
-    }
-    // 键盘事件
-    let downArrow = false, spaceKey = false;
-    document.addEventListener('keydown', e => {
-        if (modeSelect.value === 'follow') {
-            const key = e.key.toUpperCase();
-            if (keyToCol.hasOwnProperty(key)) {
-                playNote(keyToCol[key], 0); // 立即播放声音
-                handleFollowInput(keyToCol[key]);
-            }
-            return;
-        }
-        if (e.code === 'ArrowDown') downArrow = true;
-        if (e.code === 'Space') spaceKey = true;
-        const key = e.key.toUpperCase();
-        if (keyToCol.hasOwnProperty(key) && !pressed[key]) {
-            pressed[key] = true;
-            const col = keyToCol[key];
-            let octave = 0;
-            if (downArrow) octave = -1;
-            if (spaceKey) octave = 1;
-            playNote(col, octave); // 立即播放声音
-            for (let y = 0; y < gridSize; y++) grid[col][y] = '#fff';
-            document.getElementById('keyLabel_' + col).classList.add('active');
-            drawGrid();
-        }
-    });
-    document.addEventListener('keyup', e => {
-        if (e.code === 'ArrowDown') downArrow = false;
-        if (e.code === 'Space') spaceKey = false;
-        const key = e.key.toUpperCase();
-        if (keyToCol.hasOwnProperty(key)) {
-            pressed[key] = false;
-            const col = keyToCol[key];
-            let octave = 0;
-            if (downArrow) octave = -1;
-            if (spaceKey) octave = 1;
-            stopNote(col, octave);
-            for (let y = 0; y < gridSize; y++) grid[col][y] = null;
-            document.getElementById('keyLabel_' + col).classList.remove('active');
-            // 松开后目标主色回到中八度
-            barTargetColors[col] = octaveColors[1].slice();
-            barOctave[col] = 1;
-            drawGrid();
-        }
-    });
-    // 歌曲数据
-    const twinkleNotes = [0,0,4,4,5,5,4, 3,3,2,2,1,1,0, 4,4,3,3,2,2,1, 4,4,3,3,2,2,1, 0,0,4,4,5,5,4, 3,3,2,2,1,1,0];
-    const twinkleBeats = [1,1,1,1,1,1,2, 1,1,1,1,1,1,2, 1,1,1,1,1,1,2, 1,1,1,1,1,1,2, 1,1,1,1,1,1,2, 1,1,1,1,1,1,2];
-    const londonNotes = [4,5,4,3,2,3,4,-1,1,2,3,-1,2,3,4,-1,4,5,4,3,2,3,4,1,0,-1,4,-1,0,-1,-1,-1];
-    const londonBeats = [1,1,1,1,1,1,2,1,1,1,2,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,2,1,2,2,2];
-    const ohSusannaNotes = [0,0,1,2,2,1,0,1,1,2,4,0,-1,-1,-1,4,4,5,4,2,1,0,1,2,1,0,0,-1,-1,-1];
-    const ohSusannaBeats = [1,1,1,1,1,1,1,1,1,1,1,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4];
-    // 两只老虎
-    const tigerNotes = [0,1,2,0, 0,1,2,0, 2,3,4,-1, 2,3,4,-1, 4,5,4,3,2,0, 4,5,4,3,2,0, 0,4,0,-1, 0,4,0,-1];
-    const tigerBeats = [1,1,1,1, 1,1,1,1, 1,1,2,1, 1,1,2,1, 1,1,1,1,1,1, 1,1,1,1,1,1, 1,1,2,1, 1,1,2,1];
-    // 玛丽有只小羊羔
-    const maryNotes = [2,1,0,1,2,2,2,-1,1,1,1,-1,2,2,2,-1,2,1,0,1,2,2,2,2,1,1,2,1,0,-1,-1,-1];
-    const maryBeats = [1,1,1,1,1,1,2,1,1,1,2,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,4];
-    // 粉刷匠
-    const painterNotes = [4,2,4,2, 4,2,0,-1, 1,3,2,1, 4,-1,-1,-1, 4,2,4,2, 4,2,0,-1, 1,3,2,1, 0,-1,-1,-1];
-    const painterBeats = [1,1,1,1, 1,1,2,1, 1,1,1,1,2,1,1,1, 1,1,1,1, 1,1,2,1, 1,1,1,1,2,1,1,1];
-    // 铃儿响叮当
-    const jingleNotes = [2,2,2,-1, 2,2,2,-1, 2,4,0,1,2,-1,-1,-1, 3,3,3,3, 3,2,2,2,2,1,1,2,1,-1,4,-1,2,2,2,-1, 2,2,2,-1, 2,4,0,1,2,-1,-1,-1, 4,4,3,1,0,-1,-1,-1, 4,4,3,1,0,-1,-1,-1];
-    const jingleBeats = [1,1,2,1, 1,1,2,1, 1,1,1,1,2,1,1,1, 1,1,1,1, 1,1,1,1,1,1,1,1,2,1,1,1, 1,1,2,1, 1,1,2,1, 1,1,1,1,2,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1];
-    // 歌曲选择逻辑
-    let songNotes = twinkleNotes;
-    let songBeats = twinkleBeats;
-    songSelect.addEventListener('change', e => {
-        currentSong = e.target.value;
-        const L = LANGS[currentLang];
-        if (currentSong === 'twinkle') {
-            songNotes = twinkleNotes;
-            songBeats = twinkleBeats;
-        } else if (currentSong === 'london') {
-            songNotes = londonNotes;
-            songBeats = londonBeats;
-        } else if (currentSong === 'ohsusanna') {
-            songNotes = ohSusannaNotes;
-            songBeats = ohSusannaBeats;
-        } else if (currentSong === 'tiger') {
-            songNotes = tigerNotes;
-            songBeats = tigerBeats;
-        } else if (currentSong === 'mary') {
-            songNotes = maryNotes;
-            songBeats = maryBeats;
-        } else if (currentSong === 'painter') {
-            songNotes = painterNotes;
-            songBeats = painterBeats;
-        } else if (currentSong === 'jingle') {
-            songNotes = jingleNotes;
-            songBeats = jingleBeats;
-        }
-        songTitle.textContent = L.songTitles[currentSong] || '';
-        if (modeSelect.value === 'follow') {
-            intro.innerHTML = `<div style='white-space:pre-line;font-size:1.1em;margin-bottom:6px;'><b>Notes:</b> ${L.notesText[currentSong]||''}</div><div style='white-space:pre-line;font-size:1.1em;'>${L.lyrics[currentSong]||''}</div>`;
-        } else {
-            intro.innerHTML = L.intro;
-        }
-        stopFollowing();
-        clearAllKeyHighlights();
-    });
-    // 跟随模式播放时用当前歌曲
-    function startFollowing() {
-        followMode = true;
-        followStep = 0;
-        followActive = true;
-        followWaiting = false;
-        followFade = 0;
-        followFadeIdx = -1;
-        for (let x = 0; x < gridSize; x++) for (let y = 0; y < gridSize; y++) grid[x][y] = null;
-        drawGrid();
-        nextFollowNote();
-    }
-    function stopFollowing() {
-        followMode = false;
-        followActive = false;
-        followWaiting = false;
-        followFade = 0;
-        followFadeIdx = -1;
-        for (let x = 0; x < gridSize; x++) for (let y = 0; y < gridSize; y++) grid[x][y] = null;
-        drawGrid();
-        clearAllKeyHighlights();
-    }
-    function followGradientColor(y) {
-        // y: 0~7, 0为底部，7为顶部
-        const t = y / 7;
-        // 蓝色 hsl(210,100%,50%) 到 白色 hsl(0,0%,100%)
-        const h = 210 * (1-t);
-        const s = 100 * (1-t);
-        const l = 50 + 50*t;
-        return `hsl(${h},${s}%,${l}%)`;
-    }
-    function nextFollowNote() {
-        if (followStep >= songNotes.length) {
-            followActive = false;
-            followWaiting = false;
-            followFade = 0;
-            followFadeIdx = -1;
-            clearAllKeyHighlights();
-            return;
-        }
-        let idx = songNotes[followStep];
-        clearAllKeyHighlights();
-        if (idx === -1) {
-            followStep++;
-            setTimeout(nextFollowNote, 400);
-            return;
-        }
-        // 只高亮A~J，不高亮K
-        if (idx < 7) highlightFollowKey(idx);
-        // 不再高亮bar，直接清空bar
-        for (let x = 0; x < gridSize; x++) for (let y = 0; y < gridSize; y++) grid[x][y] = null;
-        drawGrid();
-        followWaiting = true;
-        followFade = 0;
-        followFadeIdx = idx;
-    }
-    function handleFollowInput(idx) {
-        if (!followMode || !followActive || !followWaiting) return;
-        if (songNotes[followStep] === idx && idx < 7) {
-            playNote(idx, 0); // 按对时播放音符
-            // 生成bar动画
-            for (let y = 0; y < gridSize; y++) grid[idx][y] = '#fff';
-            document.getElementById('keyLabel_' + idx).classList.add('active');
-            drawGrid();
-            followWaiting = false;
-            followFade = 1.0;
-            followFadeIdx = idx;
-            clearAllKeyHighlights();
-            // bar动画淡出（高度和透明度同步递减），但不阻塞下一个提示音
-            let fadeStep = 0;
-            const fadeFrames = 30; // 约0.5秒
-            const idxCopy = idx;
-            followStep++;
-            setTimeout(nextFollowNote, 180);
-            // 记录当前渐变色hue
-            const phase = energyGradientPhase;
-            let hue1, hue2;
-            let t = phase % 1;
-            if (phase < 1) { hue1 = 210; hue2 = 120; }
-            else if (phase < 2) { hue1 = 120; hue2 = 50; t = phase-1; }
-            else { hue1 = 50; hue2 = 210; t = phase-2; }
-            const baseHue = hue1 + (hue2-hue1)*t;
-            const fadeAnim = () => {
-                if (fadeStep < fadeFrames) {
-                    const h = Math.round(gridSize * (1 - fadeStep / fadeFrames));
-                    for (let y = 0; y < gridSize; y++) {
-                        if (y >= gridSize - h) {
-                            const t2 = (y - (gridSize-h)) / Math.max(1,h-1);
-                            const hue = baseHue;
-                            const sat = 100;
-                            const light = 60 + 40*t2;
-                            grid[idxCopy][y] = `hsla(${hue},${sat}%,${light}%,${1 - fadeStep/fadeFrames})`;
-                        } else {
-                            grid[idxCopy][y] = null;
-                        }
-                    }
-                    drawGrid();
-                    fadeStep++;
-                    requestAnimationFrame(fadeAnim);
-                } else {
-                    for (let y = 0; y < gridSize; y++) grid[idxCopy][y] = null;
-                    document.getElementById('keyLabel_' + idxCopy).classList.remove('active');
-                    drawGrid();
-                }
-            };
-            fadeAnim();
-        }
-    }
-    modeSelect.addEventListener('change', e => {
-        if (modeSelect.value === 'follow') {
-            songBar.style.display = '';
-            const L = LANGS[currentLang];
-            songTitle.textContent = L.songTitles[currentSong] || '';
-            intro.innerHTML = `<div style='white-space:pre-line;font-size:1.1em;margin-bottom:6px;'><b>Notes:</b> ${L.notesText[currentSong]||''}</div><div style='white-space:pre-line;font-size:1.1em;'>${L.lyrics[currentSong]||''}</div>`;
-            stopFollowing();
-        } else {
-            songBar.style.display = 'none';
-            intro.innerHTML = LANGS[currentLang].intro;
-            stopFollowing();
-            clearAllKeyHighlights();
-        }
-    });
-    followPlayBtn.addEventListener('click', () => {
-        startFollowing();
-    });
-    // 音量控制逻辑
-    let globalVolume = 0.8;
-    const volumeSlider = document.querySelector('.volume-row input');
-    const volumeValue = document.querySelector('.volume-row span');
-    volumeSlider.addEventListener('input', () => {
-        globalVolume = parseInt(volumeSlider.value) / 100;
-        volumeValue.textContent = volumeSlider.value + '%';
-        // 实时调整所有正在播放的音量
-        Object.values(oscillators).forEach(({gain}) => {
-            if (gain) gain.gain.value = 0.18 * globalVolume;
-        });
-    });
-    function highlightFollowKey(idx) {
-        // 只高亮当前要按的按钮
-        for (let i = 0; i < 8; i++) {
-            const el = document.getElementById('keyLabel_' + i);
-            if (i === idx) el && el.classList.add('highlight');
-            else el && el.classList.remove('highlight');
-        }
-    }
-    function clearAllKeyHighlights() {
-        for (let i = 0; i < 8; i++) {
-            const el = document.getElementById('keyLabel_' + i);
-            el && el.classList.remove('highlight');
-        }
-    }
-    // 节拍器相关
-    let metronomeOn = false;
-    let metronomeTimer = null;
-    let metronomeBpm = 80;
-    function toggleMetronome() {
-        metronomeOn = !metronomeOn;
-        const el = document.getElementById('keyLabel_7');
-        if (metronomeOn) {
-            el.classList.add('active');
-            startMetronome();
-        } else {
-            el.classList.remove('active');
-            stopMetronome();
-        }
-    }
-    function startMetronome() {
-        if (metronomeTimer) clearInterval(metronomeTimer);
-        metronomeTimer = setInterval(()=>{
-            flashMetronome();
-            playMetronomeClick();
-        }, 60000/metronomeBpm);
-    }
-    function stopMetronome() {
-        if (metronomeTimer) clearInterval(metronomeTimer);
-        metronomeTimer = null;
-        document.getElementById('keyLabel_7').classList.remove('active');
-    }
-    function flashMetronome() {
-        const el = document.getElementById('keyLabel_7');
-        el.classList.add('highlight');
-        setTimeout(()=>{
-            el.classList.remove('highlight');
-        }, 120);
-    }
-    function playMetronomeClick() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'square';
-        osc.frequency.value = 1200;
-        gain.gain.value = 0.18 * globalVolume;
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start();
-        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
-        setTimeout(()=>{
-            osc.stop();
-            osc.disconnect();
-            gain.disconnect();
-        }, 100);
-    }
-    window.onload = function() {
-        document.getElementById('followPlayBtn').classList.add('play-highlight');
-        // 你原有的onload逻辑如果有，也可以合并到这里
-    };
-    </script>
+
+    drawMaze();
+  </script>
 </body>
 </html> 
