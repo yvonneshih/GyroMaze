@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>8x8 迷宫陀螺仪控制</title>
+  <style>
+    canvas { background: #eee; display: block; margin: 0 auto; }
+    body { text-align: center; }
+  </style>
+</head>
+<body>
+  <h2>用手机陀螺仪控制小球逃离迷宫</h2>
+  <canvas id="maze" width="400" height="400"></canvas>
+  <script>
+    const size = 8;
+    const cellSize = 50;
+    const canvas = document.getElementById('maze');
+    const ctx = canvas.getContext('2d');
+
+    // 0: 空地, 1: 障碍物, 2: 终点
+    const maze = [
+      [0,0,1,0,0,0,1,0],
+      [1,0,1,0,1,0,1,0],
+      [0,0,0,0,1,0,0,0],
+      [0,1,1,1,1,1,1,0],
+      [0,0,0,0,0,0,1,0],
+      [1,1,1,1,1,0,1,0],
+      [0,0,0,0,1,0,0,0],
+      [0,1,1,0,0,0,1,2]
+    ];
+
+    let player = {x:0, y:0};
+
+    function drawMaze() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for(let y=0; y<size; y++) {
+        for(let x=0; x<size; x++) {
+          if(maze[y][x] === 1) {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+          } else if(maze[y][x] === 2) {
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+          }
+          ctx.strokeStyle = '#bbb';
+          ctx.strokeRect(x*cellSize, y*cellSize, cellSize, cellSize);
+        }
+      }
+      // 画玩家
+      ctx.beginPath();
+      ctx.arc(player.x*cellSize+cellSize/2, player.y*cellSize+cellSize/2, cellSize/3, 0, Math.PI*2);
+      ctx.fillStyle = '#2196f3';
+      ctx.fill();
+    }
+
+    function movePlayer(dx, dy) {
+      let nx = player.x + dx;
+      let ny = player.y + dy;
+      if(nx >= 0 && nx < size && ny >= 0 && ny < size && maze[ny][nx] !== 1) {
+        player.x = nx;
+        player.y = ny;
+        if(maze[ny][nx] === 2) {
+          setTimeout(()=>alert('恭喜逃出迷宫！'), 100);
+        }
+      }
+      drawMaze();
+    }
+
+    // 陀螺仪控制
+    let lastMove = Date.now();
+    window.addEventListener('deviceorientation', function(event) {
+      // event.gamma: 左右, event.beta: 前后
+      if(Date.now() - lastMove < 200) return; // 控制移动频率
+      let moved = false;
+      if(event.gamma > 15) { movePlayer(1,0); moved = true; } // 右
+      else if(event.gamma < -15) { movePlayer(-1,0); moved = true; } // 左
+      if(event.beta > 25) { movePlayer(0,1); moved = true; } // 下
+      else if(event.beta < 5) { movePlayer(0,-1); moved = true; } // 上
+      if(moved) lastMove = Date.now();
+    });
+
+    drawMaze();
+  </script>
+</body>
+</html>
